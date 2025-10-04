@@ -47,40 +47,8 @@ public class BackpackAccessoryRenderer implements AccessoryRenderer {
 
     @Override
     public <M extends LivingEntity> void render(ItemStack stack, SlotReference reference, PoseStack matrices, EntityModel<M> model, MultiBufferSource multiBufferSource, int light, float limbSwing, float limbSwingAmount, float partialTicks, float ageInTicks, float netHeadYaw, float headPitch) {
-        if (!(model instanceof HumanoidModel<?> humanoidModel)) return;
-        if (this.model == null) return;
-
-        matrices.pushPose();
-
-        // Align to body
-        AccessoryRenderer.transformToModelPart(matrices, humanoidModel.body, 0, 0, -1);
-
-        // Calculate lid rotation based on open state
-        float lidRot = 0;
-        LivingEntity entity = reference.entity();
-        boolean isOpen = entity.getData(OPEN_COUNT) > 0;
-        int openTicks = entity.getData(OPEN_TICKS);
-
-        if (isOpen && openTicks < 10) {
-            float t = ((float) openTicks + partialTicks);
-            lidRot = (float) Math.pow(2, -1 * t) * Mth.sin((t - 0.75F) * 0.5F) + 1;
-        } else if (openTicks == 10) {
-            lidRot = 1;
-        } else if (openTicks > 0) {
-            float t = ((float) openTicks - partialTicks);
-            lidRot = (float) -Math.pow(2, t - 10) * Mth.sin((t - 10.75F) * 0.5F);
-        }
-
-        this.model.getChild("base").getChild("lid").xRot = lidRot;
-
-        // Render base layer
-        VertexConsumer vertexConsumer = ItemRenderer.getArmorFoilBuffer(multiBufferSource, RenderType.armorCutoutNoCull(TEXTURE), stack.hasFoil());
-        this.model.render(matrices, vertexConsumer, light, OverlayTexture.NO_OVERLAY);
-
-        // Render colored overlay
-        renderColoredLayer(matrices, multiBufferSource, light, stack);
-
-        matrices.popPose();
+        // Rendering disabled - backpack is invisible when worn in accessories slot
+        return;
     }
 
     private void renderColoredLayer(PoseStack matrices, MultiBufferSource buffer, int light, ItemStack stack) {
