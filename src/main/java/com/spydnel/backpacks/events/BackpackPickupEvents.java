@@ -102,16 +102,19 @@ public class BackpackPickupEvents {
                         .invoke(null, player);
 
                     if (capability != null) {
-                        // Try to equip in accessories slot
-                        boolean equipped = (boolean) capability.getClass().getMethod("equipAccessory", ItemStack.class, Boolean.TYPE)
+                        // Use attemptToEquipAccessory which modifies the stack in-place
+                        Object result = capability.getClass().getMethod("attemptToEquipAccessory", ItemStack.class, Boolean.TYPE)
                             .invoke(capability, backpack, false);
-                        if (equipped) {
+
+                        // If result is non-null, item was equipped (backpack stack was modified)
+                        if (result != null) {
                             return true;
                         }
                     }
                 }
             } catch (Exception e) {
                 // Accessories not loaded or couldn't equip
+                Backpacks.LOGGER.debug("Could not equip backpack to accessories slot", e);
             }
         }
 
