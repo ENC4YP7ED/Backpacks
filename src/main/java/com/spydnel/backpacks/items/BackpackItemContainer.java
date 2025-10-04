@@ -71,17 +71,26 @@ public class BackpackItemContainer extends SimpleContainer {
     /**
      * Refreshes the itemStack reference to ensure it's current.
      * Called when a new viewer accesses an existing container.
+     * @return true if backpack still exists, false if it was removed
      */
-    public void refreshItemStack() {
+    public boolean refreshItemStack() {
         ItemStack freshStack = getBackpackFromEntity(target);
         if (!freshStack.isEmpty() && freshStack.is(BPItems.BACKPACK)) {
             this.itemStack = freshStack;
+            return true;
         }
+        return false;
     }
 
     public boolean stillValid(Player player) {
-        // Refresh itemStack reference to ensure it's current
-        refreshItemStack();
+        // Check if backpack still exists
+        boolean backpackExists = refreshItemStack();
+
+        // If backpack is gone, close container for all viewers
+        if (!backpackExists) {
+            closeForAllViewers();
+            return false;
+        }
 
         return
                 target != null &&
@@ -91,6 +100,36 @@ public class BackpackItemContainer extends SimpleContainer {
                 itemStack.is(BPItems.BACKPACK) &&
                 itemStack.has(DataComponents.CONTAINER) &&
                 player.distanceTo(target) < 5;
+    }
+
+    /**
+     * Closes the container for all viewers when backpack is removed
+     */
+    private void closeForAllViewers() {
+        if (!level.isClientSide) {
+            // Create a copy to avoid concurrent modification
+            var viewersCopy = new java.util.ArrayList<>(viewers);
+            for (Player viewer : viewersCopy) {
+                if (viewer instanceof ServerPlayer serverPlayer) {
+                    serverPlayer.closeContainer();
+                }
+            }
+        }
+    }
+
+    /**
+     * Validates container state and kicks viewers if backpack is gone.
+     * Called periodically from server tick.
+     */
+    public void validateAndKickIfNeeded() {
+        if (level.isClientSide) return;
+
+        // Check if backpack still exists
+        ItemStack currentStack = getBackpackFromEntity(target);
+        if (currentStack.isEmpty() || !currentStack.is(BPItems.BACKPACK)) {
+            // Backpack was removed - kick all viewers
+            closeForAllViewers();
+        }
     }
 
     public void setChanged() {

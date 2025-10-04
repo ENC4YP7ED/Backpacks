@@ -77,4 +77,16 @@ public class BackpackContainerManager {
             return false;
         });
     }
+
+    /**
+     * Validates all open containers and kicks viewers if backpack was removed.
+     * Called periodically from server tick.
+     */
+    public static void validateAllContainers() {
+        for (BackpackItemContainer container : openContainers.values()) {
+            if (container.getViewerCount() > 0) {
+                container.validateAndKickIfNeeded();
+            }
+        }
+    }
 }
