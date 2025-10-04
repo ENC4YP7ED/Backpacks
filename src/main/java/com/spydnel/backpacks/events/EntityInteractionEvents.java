@@ -2,6 +2,7 @@ package com.spydnel.backpacks.events;
 
 import com.spydnel.backpacks.BackpackWearer;
 import com.spydnel.backpacks.Backpacks;
+import com.spydnel.backpacks.items.BackpackContainerManager;
 import com.spydnel.backpacks.items.BackpackItemContainer;
 import com.spydnel.backpacks.registry.BPItems;
 import net.minecraft.core.component.DataComponents;
@@ -41,9 +42,12 @@ public class EntityInteractionEvents{
         }
 
         if (item.is(BPItems.BACKPACK)) {
-            BackpackItemContainer container = new BackpackItemContainer(target, player);
+            // Get or create shared container for this backpack
+            // Multiple players viewing the same backpack will share the same container instance
+            BackpackItemContainer container = BackpackContainerManager.getOrCreateContainer(target, player);
+
             if (!item.has(DataComponents.CONTAINER)) { item.set(DataComponents.CONTAINER, ItemContainerContents.EMPTY); }
-            item.get(DataComponents.CONTAINER).copyInto(container.getItems());
+
             player.openMenu(new SimpleMenuProvider((a, b, c) -> new ShulkerBoxMenu(a, player.getInventory(), container), Component.translatable("container.backpack")));
             event.setCancellationResult(InteractionResult.CONSUME);
             event.setCanceled(true);
