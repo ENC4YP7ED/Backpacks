@@ -1,5 +1,6 @@
 package com.spydnel.backpacks.events;
 
+import com.spydnel.backpacks.BackpackAccessoriesHelper;
 import com.spydnel.backpacks.Backpacks;
 import com.spydnel.backpacks.blocks.BackpackBlockEntity;
 import com.spydnel.backpacks.registry.BPBlocks;
@@ -48,17 +49,11 @@ public class BackpackPickupEvents {
             return chestItem;
         }
 
-        // Check accessories slot if mod is loaded
-        if (ModList.get().isLoaded("accessories")) {
-            try {
-                Class<?> integrationClass = Class.forName("com.spydnel.backpacks.integration.accessories.AccessoriesIntegration");
-                ItemStack accessoriesItem = (ItemStack) integrationClass.getMethod("getBackpackFromAccessories", net.minecraft.world.entity.LivingEntity.class)
-                    .invoke(null, player);
-                if (!accessoriesItem.isEmpty()) {
-                    return accessoriesItem;
-                }
-            } catch (Exception e) {
-                // Accessories not loaded or error
+        // Check accessories slot using mixin interface (no reflection!)
+        if (player instanceof BackpackAccessoriesHelper helper) {
+            ItemStack accessoriesItem = helper.backpacks$getAccessoriesBackpack();
+            if (!accessoriesItem.isEmpty()) {
+                return accessoriesItem;
             }
         }
 
@@ -67,18 +62,11 @@ public class BackpackPickupEvents {
 
     // Helper method to check if player has free backpack slot
     private static boolean hasEmptyBackpackSlot(Player player) {
-        // Check accessories slot first if available
-        if (ModList.get().isLoaded("accessories")) {
-            try {
-                Class<?> integrationClass = Class.forName("com.spydnel.backpacks.integration.accessories.AccessoriesIntegration");
-                boolean hasBackpack = (boolean) integrationClass.getMethod("isWearingBackpackInAccessories", net.minecraft.world.entity.LivingEntity.class)
-                    .invoke(null, player);
-                if (!hasBackpack) {
-                    // Accessories slot is available
-                    return true;
-                }
-            } catch (Exception e) {
-                // Accessories not loaded or error
+        // Check accessories slot using mixin interface (no reflection!)
+        if (player instanceof BackpackAccessoriesHelper helper) {
+            if (!helper.backpacks$hasAccessoriesBackpack()) {
+                // Accessories slot is available
+                return true;
             }
         }
 
@@ -88,32 +76,16 @@ public class BackpackPickupEvents {
 
     // Helper method to equip backpack to best available slot
     private static boolean equipBackpack(Player player, ItemStack backpack) {
-        // Try accessories slot first if mod is loaded
+        // Try accessories slot first using direct API (no reflection!)
         if (ModList.get().isLoaded("accessories")) {
             try {
                 Class<?> integrationClass = Class.forName("com.spydnel.backpacks.integration.accessories.AccessoriesIntegration");
-                boolean hasBackpack = (boolean) integrationClass.getMethod("isWearingBackpackInAccessories", net.minecraft.world.entity.LivingEntity.class)
-                    .invoke(null, player);
-
-                if (!hasBackpack) {
-                    // Try to equip in accessories slot using Accessories API
-                    Class<?> capabilityClass = Class.forName("io.wispforest.accessories.api.AccessoriesCapability");
-                    Object capability = capabilityClass.getMethod("get", net.minecraft.world.entity.LivingEntity.class)
-                        .invoke(null, player);
-
-                    if (capability != null) {
-                        // Use attemptToEquipAccessory which modifies the stack in-place
-                        Object result = capability.getClass().getMethod("attemptToEquipAccessory", ItemStack.class, Boolean.TYPE)
-                            .invoke(capability, backpack, false);
-
-                        // If result is non-null, item was equipped (backpack stack was modified)
-                        if (result != null) {
-                            return true;
-                        }
-                    }
+                boolean equipped = (boolean) integrationClass.getMethod("tryEquipBackpack", net.minecraft.world.entity.LivingEntity.class, ItemStack.class)
+                    .invoke(null, player, backpack);
+                if (equipped) {
+                    return true;
                 }
             } catch (Exception e) {
-                // Accessories not loaded or couldn't equip
                 Backpacks.LOGGER.debug("Could not equip backpack to accessories slot", e);
             }
         }
@@ -136,35 +108,14 @@ public class BackpackPickupEvents {
             return true;
         }
 
-        // Check and remove from accessories slot if mod is loaded
+        // Try to remove from accessories slot using direct API (no complex reflection!)
         if (ModList.get().isLoaded("accessories")) {
             try {
-                Class<?> capabilityClass = Class.forName("io.wispforest.accessories.api.AccessoriesCapability");
-                Object capability = capabilityClass.getMethod("get", net.minecraft.world.entity.LivingEntity.class)
+                Class<?> integrationClass = Class.forName("com.spydnel.backpacks.integration.accessories.AccessoriesIntegration");
+                boolean removed = (boolean) integrationClass.getMethod("tryRemoveBackpack", net.minecraft.world.entity.LivingEntity.class)
                     .invoke(null, player);
-
-                if (capability != null) {
-                    // Get all equipped backpacks
-                    Object equipped = capability.getClass().getMethod("getEquipped", net.minecraft.world.item.Item.class)
-                        .invoke(capability, BPItems.BACKPACK.get());
-
-                    // Check if it's a list and has items
-                    if (equipped instanceof java.util.List) {
-                        java.util.List<?> equippedList = (java.util.List<?>) equipped;
-                        if (!equippedList.isEmpty()) {
-                            // Get the first equipped backpack's SlotEntryReference
-                            Object slotEntryRef = equippedList.get(0);
-
-                            // Get the SlotReference from the SlotEntryReference (it's a record)
-                            Object slotReference = slotEntryRef.getClass().getMethod("reference").invoke(slotEntryRef);
-
-                            // Use SlotReference.setStack() to remove the item
-                            slotReference.getClass().getMethod("setStack", ItemStack.class)
-                                .invoke(slotReference, ItemStack.EMPTY);
-
-                            return true;
-                        }
-                    }
+                if (removed) {
+                    return true;
                 }
             } catch (Exception e) {
                 Backpacks.LOGGER.error("Failed to remove backpack from accessories slot", e);

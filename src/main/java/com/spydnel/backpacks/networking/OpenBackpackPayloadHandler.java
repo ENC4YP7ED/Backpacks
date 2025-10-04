@@ -1,5 +1,6 @@
 package com.spydnel.backpacks.networking;
 
+import com.spydnel.backpacks.BackpackAccessoriesHelper;
 import com.spydnel.backpacks.Backpacks;
 import com.spydnel.backpacks.items.BackpackContainerManager;
 import com.spydnel.backpacks.items.BackpackItemContainer;
@@ -47,12 +48,10 @@ public class OpenBackpackPayloadHandler {
     }
 
     private static ItemStack getBackpackFromAccessories(ServerPlayer player) {
-        try {
-            Class<?> integrationClass = Class.forName("com.spydnel.backpacks.integration.accessories.AccessoriesIntegration");
-            return (ItemStack) integrationClass.getMethod("getBackpackFromAccessories", net.minecraft.world.entity.LivingEntity.class)
-                .invoke(null, player);
-        } catch (Exception e) {
-            return ItemStack.EMPTY;
+        // Use mixin interface for fast access (no reflection!)
+        if (player instanceof BackpackAccessoriesHelper helper) {
+            return helper.backpacks$getAccessoriesBackpack();
         }
+        return ItemStack.EMPTY;
     }
 }

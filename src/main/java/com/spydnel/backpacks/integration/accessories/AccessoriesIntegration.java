@@ -48,4 +48,60 @@ public class AccessoriesIntegration {
     public static boolean isWearingBackpackInAccessories(LivingEntity entity) {
         return !getBackpackFromAccessories(entity).isEmpty();
     }
+
+    /**
+     * Attempts to equip a backpack in the accessories slot.
+     * @return true if successfully equipped, false otherwise
+     */
+    public static boolean tryEquipBackpack(LivingEntity entity, ItemStack backpack) {
+        if (!initialized) return false;
+
+        try {
+            var capability = AccessoriesCapability.get(entity);
+            if (capability == null) return false;
+
+            // Check if already wearing a backpack
+            if (isWearingBackpackInAccessories(entity)) {
+                return false;
+            }
+
+            // Use attemptToEquipAccessory which modifies the stack in-place
+            var result = capability.attemptToEquipAccessory(backpack, false);
+
+            // If result is non-null, item was equipped
+            return result != null;
+        } catch (Exception e) {
+            Backpacks.LOGGER.debug("Could not equip backpack to accessories slot", e);
+            return false;
+        }
+    }
+
+    /**
+     * Attempts to remove backpack from accessories slot.
+     * @return true if successfully removed, false otherwise
+     */
+    public static boolean tryRemoveBackpack(LivingEntity entity) {
+        if (!initialized) return false;
+
+        try {
+            var capability = AccessoriesCapability.get(entity);
+            if (capability == null) return false;
+
+            // Get all equipped backpacks
+            var equipped = capability.getEquipped(BPItems.BACKPACK.get());
+            if (equipped.isEmpty()) return false;
+
+            // Get the first equipped backpack's SlotEntryReference
+            var slotEntryRef = equipped.getFirst();
+
+            // Get the SlotReference from the SlotEntryReference
+            var slotReference = slotEntryRef.reference();
+
+            // Use SlotReference.setStack() to remove the item
+            return slotReference.setStack(ItemStack.EMPTY);
+        } catch (Exception e) {
+            Backpacks.LOGGER.error("Failed to remove backpack from accessories slot", e);
+            return false;
+        }
+    }
 }

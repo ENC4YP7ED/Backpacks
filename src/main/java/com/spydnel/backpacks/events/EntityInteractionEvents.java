@@ -1,5 +1,6 @@
 package com.spydnel.backpacks.events;
 
+import com.spydnel.backpacks.BackpackAccessoriesHelper;
 import com.spydnel.backpacks.BackpackWearer;
 import com.spydnel.backpacks.Backpacks;
 import com.spydnel.backpacks.items.BackpackContainerManager;
@@ -55,13 +56,11 @@ public class EntityInteractionEvents{
     }
 
     private static ItemStack getBackpackFromAccessories(LivingEntity entity) {
-        try {
-            Class<?> integrationClass = Class.forName("com.spydnel.backpacks.integration.accessories.AccessoriesIntegration");
-            return (ItemStack) integrationClass.getMethod("getBackpackFromAccessories", LivingEntity.class)
-                .invoke(null, entity);
-        } catch (Exception e) {
-            return ItemStack.EMPTY;
+        // Use mixin interface for fast access (no reflection!)
+        if (entity instanceof BackpackAccessoriesHelper helper) {
+            return helper.backpacks$getAccessoriesBackpack();
         }
+        return ItemStack.EMPTY;
     }
 
     public static boolean isBehind(Player player, LivingEntity target) {

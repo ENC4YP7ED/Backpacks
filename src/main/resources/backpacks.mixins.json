@@ -5,7 +5,8 @@
   "mixins": [
     "ArmorSlotMixin",
     "ItemEntityMixin",
-    "LivingEntityMixin"
+    "LivingEntityMixin",
+    "LivingEntityAccessoriesMixin"
   ],
   "client": [
     "CapeLayerMixin",

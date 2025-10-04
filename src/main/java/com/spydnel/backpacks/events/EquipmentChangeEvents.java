@@ -1,5 +1,6 @@
 package com.spydnel.backpacks.events;
 
+import com.spydnel.backpacks.BackpackAccessoriesHelper;
 import com.spydnel.backpacks.Backpacks;
 import com.spydnel.backpacks.items.BackpackContainerManager;
 import com.spydnel.backpacks.registry.BPItems;
@@ -39,17 +40,10 @@ public class EquipmentChangeEvents {
      * Checks if entity is wearing backpack in accessories slot
      */
     private static boolean hasBackpackInAccessories(LivingEntity entity) {
-        if (!ModList.get().isLoaded("accessories")) {
-            return false;
+        // Use mixin interface for fast access (no reflection!)
+        if (entity instanceof BackpackAccessoriesHelper helper) {
+            return helper.backpacks$hasAccessoriesBackpack();
         }
-
-        try {
-            Class<?> integrationClass = Class.forName("com.spydnel.backpacks.integration.accessories.AccessoriesIntegration");
-            ItemStack accessoriesItem = (ItemStack) integrationClass.getMethod("getBackpackFromAccessories", LivingEntity.class)
-                .invoke(null, entity);
-            return !accessoriesItem.isEmpty() && accessoriesItem.is(BPItems.BACKPACK);
-        } catch (Exception e) {
-            return false;
-        }
+        return false;
     }
 }
