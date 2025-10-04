@@ -25,6 +25,7 @@ import net.minecraft.world.level.material.Fluids;
 import net.minecraft.world.phys.shapes.CollisionContext;
 import net.neoforged.bus.api.EventPriority;
 import net.neoforged.bus.api.SubscribeEvent;
+import net.neoforged.fml.ModList;
 import net.neoforged.fml.common.EventBusSubscriber;
 import net.minecraft.world.InteractionResult;
 import net.neoforged.neoforge.common.util.TriState;
@@ -40,6 +41,89 @@ import static com.spydnel.backpacks.blocks.BackpackBlock.WATERLOGGED;
 @EventBusSubscriber(modid = Backpacks.MODID)
 public class BackpackPickupEvents {
 
+    // Helper method to get backpack from either chest or accessories slot
+    private static ItemStack getEquippedBackpack(Player player) {
+        ItemStack chestItem = player.getItemBySlot(EquipmentSlot.CHEST);
+        if (chestItem.is(BPItems.BACKPACK)) {
+            return chestItem;
+        }
+
+        // Check accessories slot if mod is loaded
+        if (ModList.get().isLoaded("accessories")) {
+            try {
+                Class<?> integrationClass = Class.forName("com.spydnel.backpacks.integration.accessories.AccessoriesIntegration");
+                ItemStack accessoriesItem = (ItemStack) integrationClass.getMethod("getBackpackFromAccessories", net.minecraft.world.entity.LivingEntity.class)
+                    .invoke(null, player);
+                if (!accessoriesItem.isEmpty()) {
+                    return accessoriesItem;
+                }
+            } catch (Exception e) {
+                // Accessories not loaded or error
+            }
+        }
+
+        return ItemStack.EMPTY;
+    }
+
+    // Helper method to check if player has free backpack slot
+    private static boolean hasEmptyBackpackSlot(Player player) {
+        // Check accessories slot first if available
+        if (ModList.get().isLoaded("accessories")) {
+            try {
+                Class<?> integrationClass = Class.forName("com.spydnel.backpacks.integration.accessories.AccessoriesIntegration");
+                boolean hasBackpack = (boolean) integrationClass.getMethod("isWearingBackpackInAccessories", net.minecraft.world.entity.LivingEntity.class)
+                    .invoke(null, player);
+                if (!hasBackpack) {
+                    // Accessories slot is available
+                    return true;
+                }
+            } catch (Exception e) {
+                // Accessories not loaded or error
+            }
+        }
+
+        // Check chest slot
+        return player.getItemBySlot(EquipmentSlot.CHEST).isEmpty();
+    }
+
+    // Helper method to equip backpack to best available slot
+    private static boolean equipBackpack(Player player, ItemStack backpack) {
+        // Try accessories slot first if mod is loaded
+        if (ModList.get().isLoaded("accessories")) {
+            try {
+                Class<?> integrationClass = Class.forName("com.spydnel.backpacks.integration.accessories.AccessoriesIntegration");
+                boolean hasBackpack = (boolean) integrationClass.getMethod("isWearingBackpackInAccessories", net.minecraft.world.entity.LivingEntity.class)
+                    .invoke(null, player);
+
+                if (!hasBackpack) {
+                    // Try to equip in accessories slot using Accessories API
+                    Class<?> capabilityClass = Class.forName("io.wispforest.accessories.api.AccessoriesCapability");
+                    Object capability = capabilityClass.getMethod("get", net.minecraft.world.entity.LivingEntity.class)
+                        .invoke(null, player);
+
+                    if (capability != null) {
+                        // Try to equip in accessories slot
+                        boolean equipped = (boolean) capability.getClass().getMethod("equipAccessory", ItemStack.class, Boolean.TYPE)
+                            .invoke(capability, backpack, false);
+                        if (equipped) {
+                            return true;
+                        }
+                    }
+                }
+            } catch (Exception e) {
+                // Accessories not loaded or couldn't equip
+            }
+        }
+
+        // Fall back to chest slot
+        if (player.getItemBySlot(EquipmentSlot.CHEST).isEmpty()) {
+            player.setItemSlot(EquipmentSlot.CHEST, backpack);
+            return true;
+        }
+
+        return false;
+    }
+
     @SubscribeEvent(priority = EventPriority.LOWEST)
     public static void onRightClickBlock (PlayerInteractEvent.RightClickBlock event) {
         Level level = event.getLevel();
@@ -50,32 +134,35 @@ public class BackpackPickupEvents {
         BlockEntity blockEntity = level.getBlockEntity(pos);
 
         ItemStack heldItem = event.getItemStack();
-        ItemStack chestSlotItem = player.getItemBySlot(EquipmentSlot.CHEST);
+        ItemStack equippedBackpack = getEquippedBackpack(player);
 
-        boolean hasBackpack = chestSlotItem.is(BPItems.BACKPACK);
-        boolean hasChestPlate = !chestSlotItem.isEmpty();
+        boolean hasBackpack = !equippedBackpack.isEmpty();
+        boolean hasEmptySlot = hasEmptyBackpackSlot(player);
         boolean isAbove = (pos.above().getY() > player.getY());
         boolean isUnobstructed = level.isUnobstructed(BPBlocks.BACKPACK.get().defaultBlockState(), pos.above(),
                 CollisionContext.of(player)) && level.getBlockState(pos.above()).canBeReplaced();
 
-        //PICKUP
-        if (player.isShiftKeyDown() && !hasChestPlate && block == BPBlocks.BACKPACK.get() && blockEntity != null) {
+        //PICKUP - Now works with both chest and accessories slots
+        if (player.isShiftKeyDown() && hasEmptySlot && block == BPBlocks.BACKPACK.get() && blockEntity != null) {
 
             player.swing(hand);
             ItemStack itemstack = new ItemStack(BPBlocks.BACKPACK);
             itemstack.applyComponents(blockEntity.collectComponents());
-            player.setItemSlot(EquipmentSlot.CHEST, itemstack);
-            addParticles(level, pos);
 
-            if (!level.isClientSide) {
-                level.removeBlockEntity(pos);
-                level.removeBlock(pos, false);
+            // Equip to accessories slot first, then chest slot
+            if (equipBackpack(player, itemstack)) {
+                addParticles(level, pos);
+
+                if (!level.isClientSide) {
+                    level.removeBlockEntity(pos);
+                    level.removeBlock(pos, false);
+                }
+                event.setCancellationResult(InteractionResult.sidedSuccess(level.isClientSide()));
+                event.setCanceled(true);
             }
-            event.setCancellationResult(InteractionResult.sidedSuccess(level.isClientSide()));
-            event.setCanceled(true);
         }
 
-        //PLACEMENT
+        //PLACEMENT - Now works from both chest and accessories slots
         if (player.isShiftKeyDown() && heldItem.isEmpty() && hasBackpack && event.getFace() == Direction.UP && !isAbove && isUnobstructed) {
 
             player.swing(hand);
@@ -87,7 +174,7 @@ public class BackpackPickupEvents {
                     .setValue(WATERLOGGED, level.getFluidState(pos.above()).getType() == Fluids.WATER);
 
             blockEntity = new BackpackBlockEntity(pos.above(), state);
-            blockEntity.applyComponentsFromItemStack(chestSlotItem);
+            blockEntity.applyComponentsFromItemStack(equippedBackpack);
 
 
 
@@ -98,7 +185,7 @@ public class BackpackPickupEvents {
                 //((BackpackBlockEntity)blockEntity).updateColor();
                 //blockEntity.getUpdateTag(level.registryAccess());
 
-                chestSlotItem.shrink(1);
+                equippedBackpack.shrink(1);
                 level.playSound(null, pos.above(), BPSounds.BACKPACK_PLACE.value(), SoundSource.BLOCKS);
             }
             event.setCancellationResult(InteractionResult.sidedSuccess(level.isClientSide()));
@@ -121,7 +208,7 @@ public class BackpackPickupEvents {
         }
     }
 
-    //ITEM PICKUP
+    //ITEM PICKUP - Now prioritizes accessories slot
     @SubscribeEvent
     public static void  onItemEntityPickup(ItemEntityPickupEvent.Pre event) {
         ItemEntity itemEntity = event.getItemEntity();
@@ -131,12 +218,14 @@ public class BackpackPickupEvents {
 
         if (itemStack.is(BPItems.BACKPACK) && hasContainer && !isEmpty) {
             Player player = event.getPlayer();
-            if (player.getItemBySlot(EquipmentSlot.CHEST).isEmpty() && !itemEntity.hasPickUpDelay()) {
-                player.setItemSlot(EquipmentSlot.CHEST, itemStack);
-                player.take(itemEntity, 1);
-                itemEntity.discard();
-                player.awardStat(Stats.ITEM_PICKED_UP.get(itemStack.getItem()), 1);
-                player.onItemPickup(itemEntity);
+            if (hasEmptyBackpackSlot(player) && !itemEntity.hasPickUpDelay()) {
+                // Try to equip (will prefer accessories slot if available)
+                if (equipBackpack(player, itemStack.copy())) {
+                    player.take(itemEntity, 1);
+                    itemEntity.discard();
+                    player.awardStat(Stats.ITEM_PICKED_UP.get(itemStack.getItem()), 1);
+                    player.onItemPickup(itemEntity);
+                }
             }
             event.setCanPickup(TriState.FALSE);
         }
