@@ -37,6 +37,11 @@ A balanced backpack mod for Minecraft 1.21.1 (NeoForge) focusing on simplicity a
 - Customizable in Controls → "Backpack for Dummies" category
 - Works whether backpack is in chest slot or accessories slot
 
+#### Smart Placement & Pickup
+- **Place blocks from accessories slot**: Shift+right-click to place backpack as a block, even when equipped in accessories
+- **Smart pickup prioritization**: Picking up backpacks automatically goes to accessories slot first, then chest slot
+- **Seamless slot switching**: Works intelligently whether Accessories is installed or not
+
 #### Full Feature Compatibility
 All original features work in both slots:
 - ✅ Opening/closing animations
@@ -45,6 +50,8 @@ All original features work in both slots:
 - ✅ Safety lock (can't remove non-empty backpacks)
 - ✅ Visual rendering with animations
 - ✅ Sound effects
+- ✅ Block placement from either slot
+- ✅ Automatic return to preferred slot on pickup
 
 ### Optional Integration
 The Accessories integration is **completely optional**:
@@ -180,7 +187,14 @@ This fork adds the following enhancements to the original Backpack for Dummies m
   - Added compileOnly and localRuntime dependencies
   - Version: accessories-neoforge 1.1.0-beta.39+1.21.1
 
-#### Multilingual Support
+#### Enhanced Gameplay Features
+4. **Smart Placement & Pickup System**
+   - Backpacks in accessories slot can be placed as blocks (same as chest slot)
+   - Picking up backpack blocks prioritizes accessories slot
+   - Item pickups automatically go to best available slot
+   - Works seamlessly with or without Accessories installed
+
+### Multilingual Support
 Keybinding translations added for:
 - 🇺🇸 English
 - 🇩🇪 German
