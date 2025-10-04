@@ -89,4 +89,17 @@ public class BackpackContainerManager {
             }
         }
     }
+
+    /**
+     * Validates container for a specific entity and kicks viewers if backpack is gone.
+     * Called immediately when equipment changes are detected.
+     */
+    public static void validateContainerForEntity(LivingEntity entity) {
+        String key = getContainerKey(entity);
+        BackpackItemContainer container = openContainers.get(key);
+
+        if (container != null && container.getViewerCount() > 0) {
+            container.validateAndKickIfNeeded();
+        }
+    }
 }

@@ -29,11 +29,9 @@ public class BackpackAccessory implements Accessory {
 
     @Override
     public void onUnequip(ItemStack stack, SlotReference reference) {
-        if (reference.entity() instanceof LivingEntity livingEntity && livingEntity instanceof BackpackWearer wearer) {
-            // Close any open backpack menus
-            if (livingEntity instanceof Player player && player.containerMenu instanceof ShulkerBoxMenu) {
-                player.closeContainer();
-            }
+        if (reference.entity() instanceof LivingEntity livingEntity) {
+            // Immediately validate and kick ALL viewers when backpack is unequipped from accessories slot
+            BackpackContainerManager.validateContainerForEntity(livingEntity);
         }
     }
 
