@@ -1,0 +1,104 @@
+name: Auto Release on Push
+
+on:
+  push:
+    branches:
+      - master
+      - main
+    paths-ignore:
+      - '**.md'
+      - '.github/**'
+      - '!.github/workflows/**'
+
+permissions:
+  contents: write
+
+jobs:
+  auto-release:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+      with:
+        fetch-depth: 0
+
+    - name: Set up JDK 21
+      uses: actions/setup-java@v4
+      with:
+        java-version: '21'
+        distribution: 'temurin'
+        cache: 'gradle'
+
+    - name: Grant execute permission for gradlew
+      run: chmod +x gradlew
+
+    - name: Build with Gradle
+      run: ./gradlew build --no-configuration-cache
+
+    - name: Get version and commit info
+      id: version_info
+      run: |
+        VERSION=$(grep 'mod_version=' gradle.properties | cut -d'=' -f2)
+        SHORT_SHA=$(git rev-parse --short HEAD)
+        DATE=$(date +'%Y%m%d-%H%M')
+        echo "VERSION=${VERSION}" >> $GITHUB_OUTPUT
+        echo "SHORT_SHA=${SHORT_SHA}" >> $GITHUB_OUTPUT
+        echo "DATE=${DATE}" >> $GITHUB_OUTPUT
+        echo "RELEASE_TAG=v${VERSION}-dev.${DATE}.${SHORT_SHA}" >> $GITHUB_OUTPUT
+
+    - name: Delete old development releases
+      run: |
+        # Keep only the last 3 development releases
+        gh release list --limit 100 | grep 'dev\.' | tail -n +4 | awk '{print $1}' | xargs -I {} gh release delete {} --yes --cleanup-tag || true
+      env:
+        GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+    - name: Create Development Release
+      uses: softprops/action-gh-release@v1
+      with:
+        tag_name: ${{ steps.version_info.outputs.RELEASE_TAG }}
+        name: Development Build ${{ steps.version_info.outputs.VERSION }} (${{ steps.version_info.outputs.SHORT_SHA }})
+        files: build/libs/*.jar
+        generate_release_notes: true
+        prerelease: true
+        body: |
+          ## 🚧 Development Build - Backpack for Dummies ${{ steps.version_info.outputs.VERSION }}
+
+          **⚠️ This is an automated development build from the latest commit.**
+
+          ### Commit Information
+          - **Commit:** `${{ steps.version_info.outputs.SHORT_SHA }}`
+          - **Date:** ${{ steps.version_info.outputs.DATE }}
+          - **Branch:** ${{ github.ref_name }}
+
+          ### Features
+          - ✅ Accessories mod integration for dedicated backpack slot
+          - ✅ Configurable keybinding (default: B) to open backpack
+          - ✅ Full backwards compatibility with chest armor slot
+
+          ### Installation
+          1. Download the `.jar` file below
+          2. Install NeoForge 21.1.137+ for Minecraft 1.21.1
+          3. Place the jar in your `mods` folder
+          4. (Optional) Install [Accessories](https://modrinth.com/mod/accessories) for enhanced features
+
+          ### ⚠️ Note
+          Development builds may contain untested features or bugs. For stable releases, use tagged versions (e.g., `v0.3.2`).
+
+          ### Changes in This Build
+          See the auto-generated release notes below for recent changes.
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+    - name: Comment on PR (if applicable)
+      if: github.event_name == 'pull_request'
+      uses: actions/github-script@v7
+      with:
+        script: |
+          github.rest.issues.createComment({
+            issue_number: context.issue.number,
+            owner: context.repo.owner,
+            repo: context.repo.repo,
+            body: `🎉 Development build created: [v${{ steps.version_info.outputs.VERSION }}-dev.${{ steps.version_info.outputs.DATE }}.${{ steps.version_info.outputs.SHORT_SHA }}](https://github.com/${{ github.repository }}/releases/tag/${{ steps.version_info.outputs.RELEASE_TAG }})`
+          })
