@@ -68,9 +68,26 @@ public class BackpackItemContainer extends SimpleContainer {
         }
     }
 
+    /**
+     * Refreshes the itemStack reference to ensure it's current.
+     * Called when a new viewer accesses an existing container.
+     */
+    public void refreshItemStack() {
+        ItemStack freshStack = getBackpackFromEntity(target);
+        if (!freshStack.isEmpty() && freshStack.is(BPItems.BACKPACK)) {
+            this.itemStack = freshStack;
+        }
+    }
+
     public boolean stillValid(Player player) {
+        // Refresh itemStack reference to ensure it's current
+        refreshItemStack();
+
         return
                 target != null &&
+                !target.isRemoved() &&
+                itemStack != null &&
+                !itemStack.isEmpty() &&
                 itemStack.is(BPItems.BACKPACK) &&
                 itemStack.has(DataComponents.CONTAINER) &&
                 player.distanceTo(target) < 5;

@@ -5,13 +5,18 @@ import net.minecraft.world.entity.player.Player;
 
 import java.util.HashMap;
 import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 
 /**
  * Manages shared backpack containers to ensure proper synchronization
  * when multiple players access the same backpack simultaneously.
  */
 public class BackpackContainerManager {
-    private static final Map<String, BackpackItemContainer> openContainers = new HashMap<>();
+    private static final Map<String, BackpackItemContainer> openContainers = new ConcurrentHashMap<>();
+    private static final Map<String, Long> containerCloseTime = new ConcurrentHashMap<>();
+
+    // Keep containers around for 5 seconds after last viewer closes to prevent race conditions
+    private static final long CONTAINER_CACHE_TIME = 5000; // 5 seconds in milliseconds
 
     /**
      * Gets or creates a container for the given entity's backpack.
@@ -26,18 +31,24 @@ public class BackpackContainerManager {
             // Create new container for this backpack
             container = new BackpackItemContainer(target, viewer);
             openContainers.put(key, container);
+            containerCloseTime.remove(key); // Clear any scheduled removal
+        } else {
+            // Container exists - refresh its itemStack reference to ensure it's current
+            container.refreshItemStack();
+            containerCloseTime.remove(key); // Cancel any pending removal
         }
 
         return container;
     }
 
     /**
-     * Called when a container is closed. If no more viewers, removes the container from tracking.
+     * Called when a container is closed. Schedules removal after a delay to prevent race conditions.
      */
     public static void onContainerClosed(LivingEntity target, BackpackItemContainer container) {
         if (container.getViewerCount() == 0) {
             String key = getContainerKey(target);
-            openContainers.remove(key);
+            // Mark the time when container became empty
+            containerCloseTime.put(key, System.currentTimeMillis());
         }
     }
 
@@ -46,9 +57,24 @@ public class BackpackContainerManager {
     }
 
     /**
-     * Cleanup method to remove stale containers (called periodically or on server shutdown)
+     * Cleanup method to remove stale containers after the cache timeout
      */
     public static void cleanup() {
-        openContainers.entrySet().removeIf(entry -> entry.getValue().getViewerCount() == 0);
+        long currentTime = System.currentTimeMillis();
+
+        containerCloseTime.entrySet().removeIf(entry -> {
+            String key = entry.getKey();
+            long closeTime = entry.getValue();
+
+            // If enough time has passed since container became empty, remove it
+            if (currentTime - closeTime > CONTAINER_CACHE_TIME) {
+                BackpackItemContainer container = openContainers.get(key);
+                if (container != null && container.getViewerCount() == 0) {
+                    openContainers.remove(key);
+                }
+                return true; // Remove from closeTime map
+            }
+            return false;
+        });
     }
 }
