@@ -124,6 +124,56 @@ public class BackpackPickupEvents {
         return false;
     }
 
+    // Helper method to remove backpack from whichever slot it's in
+    private static boolean removeEquippedBackpack(Player player) {
+        // Check chest slot first
+        ItemStack chestItem = player.getItemBySlot(EquipmentSlot.CHEST);
+        if (chestItem.is(BPItems.BACKPACK)) {
+            chestItem.shrink(1);
+            return true;
+        }
+
+        // Check and remove from accessories slot if mod is loaded
+        if (ModList.get().isLoaded("accessories")) {
+            try {
+                Class<?> capabilityClass = Class.forName("io.wispforest.accessories.api.AccessoriesCapability");
+                Object capability = capabilityClass.getMethod("get", net.minecraft.world.entity.LivingEntity.class)
+                    .invoke(null, player);
+
+                if (capability != null) {
+                    // Get all equipped accessories
+                    Class<?> slotEntryRefClass = Class.forName("io.wispforest.accessories.api.slot.SlotEntryReference");
+                    Object equipped = capability.getClass().getMethod("getEquipped", net.minecraft.world.item.Item.class)
+                        .invoke(capability, BPItems.BACKPACK.get());
+
+                    // Check if it's a list and has items
+                    if (equipped instanceof java.util.List) {
+                        java.util.List<?> equippedList = (java.util.List<?>) equipped;
+                        if (!equippedList.isEmpty()) {
+                            // Get the first equipped backpack reference
+                            Object slotRef = equippedList.get(0);
+
+                            // Get the slot reference and remove the item
+                            Object slotReference = slotRef.getClass().getMethod("reference").invoke(slotRef);
+                            Object container = slotReference.getClass().getMethod("container").invoke(slotReference);
+                            int slot = (int) slotReference.getClass().getMethod("slot").invoke(slotReference);
+
+                            // Remove from the accessories container
+                            container.getClass().getMethod("setItem", int.class, ItemStack.class)
+                                .invoke(container, slot, ItemStack.EMPTY);
+
+                            return true;
+                        }
+                    }
+                }
+            } catch (Exception e) {
+                Backpacks.LOGGER.error("Failed to remove backpack from accessories slot", e);
+            }
+        }
+
+        return false;
+    }
+
     @SubscribeEvent(priority = EventPriority.LOWEST)
     public static void onRightClickBlock (PlayerInteractEvent.RightClickBlock event) {
         Level level = event.getLevel();
@@ -185,7 +235,8 @@ public class BackpackPickupEvents {
                 //((BackpackBlockEntity)blockEntity).updateColor();
                 //blockEntity.getUpdateTag(level.registryAccess());
 
-                equippedBackpack.shrink(1);
+                // Properly remove backpack from equipped slot (chest or accessories)
+                removeEquippedBackpack(player);
                 level.playSound(null, pos.above(), BPSounds.BACKPACK_PLACE.value(), SoundSource.BLOCKS);
             }
             event.setCancellationResult(InteractionResult.sidedSuccess(level.isClientSide()));
