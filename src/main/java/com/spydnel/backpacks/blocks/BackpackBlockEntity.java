@@ -127,6 +127,25 @@ public class BackpackBlockEntity extends RandomizableContainerBlockEntity {
         return ClientboundBlockEntityDataPacket.create(this);
     }
 
+    @Override
+    public void onDataPacket(Connection net, ClientboundBlockEntityDataPacket pkt, HolderLookup.Provider lookupProvider) {
+        // Handle client-side synchronization when data packet is received
+        CompoundTag tag = pkt.getTag();
+        if (tag != null) {
+            loadFromTag(tag, lookupProvider);
+            // Request chunk re-render after data update
+            if (level != null && level.isClientSide()) {
+                level.sendBlockUpdated(getBlockPos(), getBlockState(), getBlockState(), Block.UPDATE_ALL);
+            }
+        }
+    }
+
+    @Override
+    public void handleUpdateTag(CompoundTag tag, HolderLookup.Provider lookupProvider) {
+        // Handle initial chunk sync when player joins
+        loadFromTag(tag, lookupProvider);
+    }
+
     protected void loadAdditional(CompoundTag tag, HolderLookup.Provider registries) {
         super.loadAdditional(tag, registries);
         this.loadFromTag(tag, registries);
@@ -140,7 +159,15 @@ public class BackpackBlockEntity extends RandomizableContainerBlockEntity {
         tag.putInt("FloatTicks", this.floatTicks);
         tag.putBoolean("NewlyPlaced", this.newlyPlaced);
         tag.putInt("Color", this.color);
-        setChanged();
+    }
+
+    @Override
+    public void setChanged() {
+        super.setChanged();
+        // Notify clients of data changes
+        if (level != null && !level.isClientSide) {
+            level.sendBlockUpdated(getBlockPos(), getBlockState(), getBlockState(), Block.UPDATE_CLIENTS);
+        }
     }
 
     @Override

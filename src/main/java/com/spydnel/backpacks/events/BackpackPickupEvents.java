@@ -183,8 +183,10 @@ public class BackpackPickupEvents {
                 Backpacks.LOGGER.debug(String.valueOf(level.getBlockState(pos.above()).isEmpty()));
                 level.setBlockAndUpdate(pos.above(), state);
                 level.setBlockEntity(blockEntity);
-                //((BackpackBlockEntity)blockEntity).updateColor();
-                //blockEntity.getUpdateTag(level.registryAccess());
+
+                // Notify clients of block entity data
+                blockEntity.setChanged();
+                level.sendBlockUpdated(pos.above(), state, state, Block.UPDATE_ALL);
 
                 // Properly remove backpack from equipped slot (chest or accessories)
                 removeEquippedBackpack(player);

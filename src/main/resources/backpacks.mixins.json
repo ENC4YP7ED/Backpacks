@@ -3,7 +3,9 @@
   "package": "com.spydnel.backpacks.mixins",
   "plugin": "com.moulberry.mixinconstraints.ConstraintsMixinPlugin",
   "mixins": [
+    "AbstractContainerMenuMixin",
     "ArmorSlotMixin",
+    "BlockEntityMixin",
     "ItemEntityMixin",
     "LivingEntityMixin",
     "LivingEntityAccessoriesMixin"
