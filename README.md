@@ -42,13 +42,17 @@ A balanced backpack mod for Minecraft 1.21.1 (NeoForge) focusing on simplicity a
 - **Smart pickup prioritization**: Picking up backpacks automatically goes to accessories slot first, then chest slot
 - **Seamless slot switching**: Works intelligently whether Accessories is installed or not
 
+#### Rendering Behavior
+- **Invisible in Accessories Slot**: When equipped in the accessories slot, the backpack is **not rendered** on the player's back
+- **Reason**: The backpack uses its own custom model/rendering system from the chest armor slot. Accessories mod's item rendering is disabled to avoid conflicts and unnecessary visual duplication
+- **Chest Slot**: Full visual rendering with opening/closing animations when equipped in chest slot
+
 #### Full Feature Compatibility
 All original features work in both slots:
-- ✅ Opening/closing animations
+- ✅ Opening/closing animations (chest slot only)
 - ✅ Behind-the-back access from other players
 - ✅ Dyeable colors
 - ✅ Safety lock (can't remove non-empty backpacks)
-- ✅ Visual rendering with animations
 - ✅ Sound effects
 - ✅ Block placement from either slot
 - ✅ Automatic return to preferred slot on pickup
@@ -159,14 +163,14 @@ This fork adds the following enhancements to the original Backpack for Dummies m
 3. **Enhanced Compatibility**
    - Reflection-based optional loading prevents crashes
    - All features work in both equipment slots
-   - Rendering system updated to support accessories slot
+   - Accessories slot rendering disabled (backpack uses custom chest armor model)
    - Behind-the-back access checks both slots
 
 #### Technical Improvements
 - **New Classes Added**:
   - `BackpackAccessory` - Implements Accessory interface
   - `AccessoriesIntegration` - Server-side integration handler
-  - `BackpackAccessoryRenderer` - Custom renderer for accessories
+  - `BackpackAccessoryRenderer` - Renderer with rendering disabled (backpack already has model)
   - `AccessoriesClientIntegration` - Client-side integration
   - `BackpackKeybindings` - Keybinding registration and handling
   - `OpenBackpackPayload` & Handler - Network packet for keybind
