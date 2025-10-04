@@ -13,6 +13,7 @@ A balanced backpack mod for Minecraft 1.21.1 (NeoForge) focusing on simplicity a
 - **27 Inventory Slots**: Same capacity as a shulker box for balanced gameplay
 - **Dyeable**: Customize your backpack with any dye color, just like leather armor
 - **Interactive Access**: Access other players' or entities' backpacks by approaching from behind
+- **Real-Time Multiplayer Sync**: Multiple players can access the same backpack simultaneously with live inventory updates - no duplication possible
 - **Visual Animations**: Smooth opening and closing animations with custom sound effects
 - **Safety Features**: Cannot remove a backpack while it contains items (prevents accidental item loss)
 - **Dual-Mode Item**: Functions as both wearable equipment and a placeable block
@@ -197,6 +198,13 @@ This fork adds the following enhancements to the original Backpack for Dummies m
    - Picking up backpack blocks prioritizes accessories slot
    - Item pickups automatically go to best available slot
    - Works seamlessly with or without Accessories installed
+
+5. **Real-Time Multiplayer Synchronization**
+   - Multiple players can access the same backpack simultaneously
+   - Shared container instance ensures all viewers see the same inventory
+   - Real-time updates: when one player moves/removes items, all viewers see changes instantly
+   - Prevents item duplication in multiplayer scenarios
+   - Automatic viewer tracking and container cleanup
 
 ### Multilingual Support
 Keybinding translations added for:
