@@ -141,8 +141,7 @@ public class BackpackPickupEvents {
                     .invoke(null, player);
 
                 if (capability != null) {
-                    // Get all equipped accessories
-                    Class<?> slotEntryRefClass = Class.forName("io.wispforest.accessories.api.slot.SlotEntryReference");
+                    // Get all equipped backpacks
                     Object equipped = capability.getClass().getMethod("getEquipped", net.minecraft.world.item.Item.class)
                         .invoke(capability, BPItems.BACKPACK.get());
 
@@ -150,17 +149,15 @@ public class BackpackPickupEvents {
                     if (equipped instanceof java.util.List) {
                         java.util.List<?> equippedList = (java.util.List<?>) equipped;
                         if (!equippedList.isEmpty()) {
-                            // Get the first equipped backpack reference
-                            Object slotRef = equippedList.get(0);
+                            // Get the first equipped backpack's SlotEntryReference
+                            Object slotEntryRef = equippedList.get(0);
 
-                            // Get the slot reference and remove the item
-                            Object slotReference = slotRef.getClass().getMethod("reference").invoke(slotRef);
-                            Object container = slotReference.getClass().getMethod("container").invoke(slotReference);
-                            int slot = (int) slotReference.getClass().getMethod("slot").invoke(slotReference);
+                            // Get the SlotReference from the SlotEntryReference (it's a record)
+                            Object slotReference = slotEntryRef.getClass().getMethod("reference").invoke(slotEntryRef);
 
-                            // Remove from the accessories container
-                            container.getClass().getMethod("setItem", int.class, ItemStack.class)
-                                .invoke(container, slot, ItemStack.EMPTY);
+                            // Use SlotReference.setStack() to remove the item
+                            slotReference.getClass().getMethod("setStack", ItemStack.class)
+                                .invoke(slotReference, ItemStack.EMPTY);
 
                             return true;
                         }
