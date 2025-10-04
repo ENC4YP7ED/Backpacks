@@ -1,6 +1,7 @@
 package com.spydnel.backpacks.networking;
 
 import com.spydnel.backpacks.Backpacks;
+import com.spydnel.backpacks.items.BackpackContainerManager;
 import com.spydnel.backpacks.items.BackpackItemContainer;
 import com.spydnel.backpacks.registry.BPItems;
 import net.minecraft.core.component.DataComponents;
@@ -29,13 +30,12 @@ public class OpenBackpackPayloadHandler {
 
                 // Open backpack if found
                 if (backpack.is(BPItems.BACKPACK)) {
-                    BackpackItemContainer container = new BackpackItemContainer(serverPlayer, serverPlayer);
+                    // Use shared container manager - same instance for all viewers
+                    BackpackItemContainer container = BackpackContainerManager.getOrCreateContainer(serverPlayer, serverPlayer);
 
                     if (!backpack.has(DataComponents.CONTAINER)) {
                         backpack.set(DataComponents.CONTAINER, ItemContainerContents.EMPTY);
                     }
-
-                    backpack.get(DataComponents.CONTAINER).copyInto(container.getItems());
 
                     serverPlayer.openMenu(new SimpleMenuProvider(
                         (id, inv, p) -> new ShulkerBoxMenu(id, serverPlayer.getInventory(), container),

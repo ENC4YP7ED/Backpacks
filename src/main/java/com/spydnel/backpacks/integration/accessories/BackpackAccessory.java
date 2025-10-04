@@ -1,6 +1,7 @@
 package com.spydnel.backpacks.integration.accessories;
 
 import com.spydnel.backpacks.BackpackWearer;
+import com.spydnel.backpacks.items.BackpackContainerManager;
 import com.spydnel.backpacks.items.BackpackItemContainer;
 import com.spydnel.backpacks.registry.BPItems;
 import io.wispforest.accessories.api.Accessory;
@@ -65,13 +66,12 @@ public class BackpackAccessory implements Accessory {
     public static void openBackpackMenu(Player player, LivingEntity wearer, ItemStack backpackStack) {
         if (!backpackStack.is(BPItems.BACKPACK)) return;
 
-        BackpackItemContainer container = new BackpackItemContainer(wearer, player);
+        // Use shared container manager - same instance for all viewers
+        BackpackItemContainer container = BackpackContainerManager.getOrCreateContainer(wearer, player);
 
         if (!backpackStack.has(DataComponents.CONTAINER)) {
             backpackStack.set(DataComponents.CONTAINER, ItemContainerContents.EMPTY);
         }
-
-        backpackStack.get(DataComponents.CONTAINER).copyInto(container.getItems());
 
         player.openMenu(new SimpleMenuProvider(
             (id, inv, p) -> new ShulkerBoxMenu(id, player.getInventory(), container),
