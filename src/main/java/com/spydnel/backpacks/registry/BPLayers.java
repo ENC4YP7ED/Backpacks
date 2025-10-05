@@ -81,5 +81,20 @@ public class BPLayers {
                 armorStandRenderer.addLayer(new BackpackLayer<>(armorStandRenderer, event.getEntityModels()));
             }
         }
+
+        // Initialize Accessories integration here - after model layers are registered
+        initializeAccessoriesIntegration(event.getEntityModels());
+    }
+
+    private static void initializeAccessoriesIntegration(EntityModelSet modelSet) {
+        if (net.neoforged.fml.ModList.get().isLoaded("accessories")) {
+            try {
+                Class.forName("com.spydnel.backpacks.integration.accessories.AccessoriesClientIntegration")
+                    .getMethod("initWithModelSet", EntityModelSet.class)
+                    .invoke(null, modelSet);
+            } catch (Exception e) {
+                Backpacks.LOGGER.error("Failed to initialize Accessories integration with model set", e);
+            }
+        }
     }
 }
