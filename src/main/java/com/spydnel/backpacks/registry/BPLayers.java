@@ -4,6 +4,7 @@ import com.spydnel.backpacks.Backpacks;
 import com.spydnel.backpacks.models.BackpackBlockRenderer;
 import com.spydnel.backpacks.models.BackpackLayer;
 import com.spydnel.backpacks.models.BackpackModel;
+import net.minecraft.client.model.geom.EntityModelSet;
 import net.minecraft.client.model.geom.ModelLayerLocation;
 import net.minecraft.client.renderer.entity.ArmorStandRenderer;
 import net.minecraft.client.renderer.entity.EntityRenderer;
