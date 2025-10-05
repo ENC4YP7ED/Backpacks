@@ -4,7 +4,6 @@ import com.spydnel.backpacks.Backpacks;
 import com.spydnel.backpacks.models.BackpackBlockRenderer;
 import com.spydnel.backpacks.models.BackpackLayer;
 import com.spydnel.backpacks.models.BackpackModel;
-import net.minecraft.client.model.geom.EntityModelSet;
 import net.minecraft.client.model.geom.ModelLayerLocation;
 import net.minecraft.client.renderer.entity.ArmorStandRenderer;
 import net.minecraft.client.renderer.entity.EntityRenderer;
@@ -80,21 +79,6 @@ public class BPLayers {
 
             } else if (renderer instanceof ArmorStandRenderer armorStandRenderer) {
                 armorStandRenderer.addLayer(new BackpackLayer<>(armorStandRenderer, event.getEntityModels()));
-            }
-        }
-
-        // Initialize Accessories integration here - after model layers are registered
-        initializeAccessoriesIntegration(event.getEntityModels());
-    }
-
-    private static void initializeAccessoriesIntegration(EntityModelSet modelSet) {
-        if (net.neoforged.fml.ModList.get().isLoaded("accessories")) {
-            try {
-                Class.forName("com.spydnel.backpacks.integration.accessories.AccessoriesClientIntegration")
-                    .getMethod("initWithModelSet", EntityModelSet.class)
-                    .invoke(null, modelSet);
-            } catch (Exception e) {
-                Backpacks.LOGGER.error("Failed to initialize Accessories integration with model set", e);
             }
         }
     }
