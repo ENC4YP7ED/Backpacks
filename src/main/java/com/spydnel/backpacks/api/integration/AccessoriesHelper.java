@@ -12,11 +12,21 @@ import javax.annotation.Nullable;
  * Utility class for Accessories API integration.
  * Provides helper methods for addon mods to interact with the Accessories API.
  *
+ * GRACEFUL DEGRADATION:
+ * All methods in this class gracefully handle the case when Accessories mod is not loaded.
+ * - isAccessoriesLoaded() returns false
+ * - getBackpackFromAccessories() returns null
+ * - isWearingBackpackInAccessories() returns false
+ *
+ * This ensures your addon works correctly whether Accessories is installed or not.
+ * No special handling required in your code - just use these methods directly.
+ *
  * Example usage:
  * <pre>
  * ItemStack backpack = AccessoriesHelper.getBackpackFromAccessories(player, MyItems.CUSTOM_BACKPACK);
  * if (backpack != null) {
  *     // Player is wearing custom backpack in accessories slot
+ *     // This works whether Accessories is loaded or not
  * }
  * </pre>
  */
@@ -24,6 +34,7 @@ public class AccessoriesHelper {
 
     /**
      * Check if the Accessories mod is loaded.
+     * Returns false if Accessories is not installed.
      */
     public static boolean isAccessoriesLoaded() {
         return ModList.get().isLoaded("accessories");

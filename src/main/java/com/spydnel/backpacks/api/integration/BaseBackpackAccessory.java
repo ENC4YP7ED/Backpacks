@@ -51,8 +51,8 @@ public abstract class BaseBackpackAccessory implements Accessory {
     public boolean canEquip(ItemStack stack, SlotReference reference) {
         if (!allowDualEquip() && reference.entity() instanceof LivingEntity livingEntity) {
             // Prevent equipping if already wearing in chest slot
-            ItemStack chestItem = livingEntity.getItemBySlot(EquipmentSlot.CHEST);
-            if (chestItem.is(getBackpackItem())) {
+            // Using DualEquipHelper ensures consistent behavior across all backpack types
+            if (DualEquipHelper.isWearingBackpackInOtherSlot(livingEntity, getBackpackItem(), false)) {
                 return false;
             }
         }

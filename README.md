@@ -222,6 +222,221 @@ All Rights Reserved
 
 This mod is the property of the original author. Please respect the author's rights.
 
+## Addon Development API
+
+Backpack for Dummies provides a comprehensive API for creating addon mods that add custom backpack types. The API handles all the complex logic, allowing you to focus on your unique features.
+
+### Quick Start
+
+Create a custom backpack addon in just a few steps:
+
+1. **Add dependency to your build.gradle**:
+```gradle
+dependencies {
+    implementation files('../Backpacks-master/build/libs/backpacks-0.3.2.jar')
+
+    // Optional: Accessories API
+    compileOnly "io.wispforest:accessories-neoforge:1.1.0-beta.39+1.21.1"
+    localRuntime "io.wispforest:accessories-neoforge:1.1.0-beta.39+1.21.1"
+}
+```
+
+2. **Extend base classes**:
+
+```java
+// Item
+public class MyBackpackItem extends BaseBackpackItem {
+    public MyBackpackItem(Block block, Properties properties) {
+        super(block, properties);
+    }
+}
+
+// Block
+public class MyBackpackBlock extends BaseBackpackBlock {
+    @Override
+    protected BlockEntityType<?> getBlockEntityType() {
+        return MyBlockEntities.MY_BACKPACK.get();
+    }
+
+    @Override
+    public BlockEntity newBlockEntity(BlockPos pos, BlockState state) {
+        return new MyBackpackBlockEntity(pos, state);
+    }
+}
+
+// Block Entity
+public class MyBackpackBlockEntity extends BaseBackpackBlockEntity {
+    public MyBackpackBlockEntity(BlockPos pos, BlockState state) {
+        super(MyBlockEntities.MY_BACKPACK.get(), pos, state);
+    }
+
+    @Override
+    protected SoundEvent getOpenSound() {
+        return SoundEvents.CHEST_OPEN;
+    }
+
+    @Override
+    protected SoundEvent getCloseSound() {
+        return SoundEvents.CHEST_CLOSE;
+    }
+}
+```
+
+### API Packages
+
+#### `com.spydnel.backpacks.api.item`
+- **BaseBackpackItem** - Base class for backpack items
+  - Prevents nesting by default
+  - Inherits all BlockItem functionality
+
+#### `com.spydnel.backpacks.api.block`
+- **BaseBackpackBlock** - Base class for backpack blocks
+  - Handles waterlogging, floating, directional placement
+  - Provides hooks for custom menu opening
+- **BaseBackpackBlockEntity** - Base class for block entities
+  - Handles animations (open, float, place)
+  - Manages color data and NBT serialization
+  - Override `shouldStoreItems()` to disable item storage (for ender chest sync, etc.)
+
+#### `com.spydnel.backpacks.api.integration`
+- **BaseBackpackAccessory** - Base for Accessories API integration
+  - Automatic dual-equip prevention
+  - Override `canUnequip()` for custom logic
+- **AccessoriesHelper** - Utility methods for checking accessories
+  - `getBackpackFromAccessories()` - Get backpack from accessories slot
+  - `isWearingBackpackInAccessories()` - Check if wearing in accessories
+  - **Graceful degradation**: All methods return null/false if Accessories not loaded
+- **AccessoriesIntegrationHelper** - Simplified registration
+  - `registerAccessory()` - One-line registration with automatic error handling
+- **DualEquipHelper** - Prevent dual-equipping backpacks
+  - `isWearingBackpackInOtherSlot()` - Check opposite slot
+
+#### `com.spydnel.backpacks.api.events`
+- **BackpackEventHelper** - Common event operations
+  - `isBehind()` - Check if player is behind target
+  - `getBackpackFromEntity()` - Get backpack from chest OR accessories
+  - `isWearingBackpack()` - Check if entity wears specific backpack
+
+#### `com.spydnel.backpacks.api.networking`
+- **BackpackNetworkHelper** - Networking utilities
+  - `openBackpackInventory()` - Open backpack menu for player
+  - `canOpenBackpack()` - Check if player can open
+
+#### `com.spydnel.backpacks.api.client` (Client-side only)
+- **BackpackKeybindingRegistry** - Register custom keybindings
+  - `registerKeybinding()` - Register under main mod's category
+  - Keybindings automatically appear in Controls menu
+
+### Features
+
+#### ✅ Dual-Equip Prevention (Hardcoded)
+The API automatically prevents equipping a backpack in chest slot when already wearing one in accessories (and vice versa). This is **hardcoded** and works for all backpack types.
+
+```java
+// In your BackpackAccessory class:
+public class MyBackpackAccessory extends BaseBackpackAccessory {
+    @Override
+    protected Item getBackpackItem() {
+        return MyItems.MY_BACKPACK.get();
+    }
+    // Dual-equip prevention is automatic!
+}
+```
+
+#### ✅ Graceful Accessories API Degradation
+All API methods gracefully handle when Accessories mod is not installed:
+- Helper methods return `null` or `false`
+- No crashes or errors
+- Your addon works with OR without Accessories
+
+```java
+// This works whether Accessories is installed or not:
+ItemStack backpack = BackpackEventHelper.getBackpackFromEntity(player, MyItems.MY_BACKPACK.get());
+if (backpack != null) {
+    // Handle backpack (works in chest OR accessories slot)
+}
+```
+
+#### ✅ Custom Keybindings
+Register your own keybinding that appears under "Backpack for Dummies" category:
+
+```java
+// Client-side only!
+@OnlyIn(Dist.CLIENT)
+public class MyBackpackKeybindings {
+    public static KeyMapping OPEN_MY_BACKPACK;
+
+    public static void register() {
+        OPEN_MY_BACKPACK = BackpackKeybindingRegistry.registerKeybinding(
+            "key.mymod.open_my_backpack",  // Translation key
+            GLFW.GLFW_KEY_B,                // Default key (B)
+            "My Custom Backpack"            // Display name
+        );
+    }
+}
+
+// In your mod constructor (client-side):
+if (FMLEnvironment.dist == Dist.CLIENT) {
+    MyBackpackKeybindings.register();
+}
+```
+
+### Example: Ender Backpack Addon
+
+See the complete example at: https://github.com/ENC4YP7ED/EnderBackpacks-addon
+
+Key features demonstrated:
+- Extends `BaseBackpackItem`, `BaseBackpackBlock`, `BaseBackpackBlockEntity`
+- Custom ender chest synchronization (override `shouldStoreItems()`)
+- Accessories integration using `BaseBackpackAccessory`
+- Custom keybinding registration
+- **171 lines of code saved** by using the API (76% reduction in block entity!)
+
+### Code Reduction Example
+
+**Before API** (161 lines):
+```java
+public class EnderBackpackBlockEntity extends BlockEntity {
+    // Manual animation handling
+    // Manual NBT serialization
+    // Manual client-server sync
+    // Manual sound effects
+    // ... 161 lines of boilerplate
+}
+```
+
+**After API** (39 lines):
+```java
+public class EnderBackpackBlockEntity extends BaseBackpackBlockEntity {
+    public EnderBackpackBlockEntity(BlockPos pos, BlockState state) {
+        super(EBBlockEntities.ENDER_BACKPACK.get(), pos, state);
+    }
+
+    @Override
+    protected boolean shouldStoreItems() { return false; }
+
+    @Override
+    protected SoundEvent getOpenSound() { return BPSounds.BACKPACK_OPEN.value(); }
+
+    @Override
+    protected SoundEvent getCloseSound() { return BPSounds.BACKPACK_CLOSE.value(); }
+}
+```
+
+**76% reduction** - everything else is handled by the API!
+
+### Best Practices
+
+1. **Always check for null** when using helper methods
+2. **Use graceful degradation** - don't check `isAccessoriesLoaded()` manually
+3. **Override only what you need** - base classes handle the rest
+4. **Register keybindings client-side only** - use `@OnlyIn(Dist.CLIENT)`
+5. **Test with and without Accessories** to ensure compatibility
+
+### Support
+
+For API questions or addon development help, please open an issue with the `api` label.
+
 ## Support
 
 For bug reports and feature requests, please use the [Issues](../../issues) page.

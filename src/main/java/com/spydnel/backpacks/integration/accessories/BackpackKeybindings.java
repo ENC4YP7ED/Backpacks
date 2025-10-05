@@ -2,6 +2,7 @@ package com.spydnel.backpacks.integration.accessories;
 
 import com.mojang.blaze3d.platform.InputConstants;
 import com.spydnel.backpacks.Backpacks;
+import com.spydnel.backpacks.api.client.BackpackKeybindingRegistry;
 import com.spydnel.backpacks.networking.OpenBackpackPayload;
 import com.spydnel.backpacks.registry.BPItems;
 import net.minecraft.client.KeyMapping;
@@ -34,6 +35,13 @@ public class BackpackKeybindings {
             CATEGORY
         );
         event.register(openBackpackKey);
+
+        // Register all addon keybindings
+        // Addons register their keybindings via BackpackKeybindingRegistry during mod construction
+        for (KeyMapping addonKeybinding : BackpackKeybindingRegistry.getRegisteredKeybindings()) {
+            event.register(addonKeybinding);
+            Backpacks.LOGGER.info("Registered addon keybinding: {}", addonKeybinding.getName());
+        }
     }
 
     @EventBusSubscriber(modid = Backpacks.MODID, value = Dist.CLIENT)
